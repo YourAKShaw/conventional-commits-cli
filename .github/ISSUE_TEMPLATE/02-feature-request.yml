@@ -1,0 +1,39 @@
+name: Feature request
+description: Propose a new capability, provider, option or workflow improvement.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: Search existing issues first. Focus on the problem you want solved; keep examples free of sensitive information.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: Who runs into this, and what happens today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behaviour
+      description: Commands, flags, config keys or output you would expect. For a new provider, link its API documentation for structured output, reasoning effort and error codes.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and trade-offs
+      description: Workarounds you use today, and any effect on privacy (what is sent to providers), the approval step, startup time or cross-platform support.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: How would we know it works?
+      description: An example scenario and observable success criteria.
+    validations:
+      required: true
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to implement this and can open a pull request.

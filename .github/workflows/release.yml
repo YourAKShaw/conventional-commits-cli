@@ -1,0 +1,227 @@
+name: Release
+
+# One tag → one run → npm package (with provenance) + standalone binaries + GitHub Release.
+# Setup and first-publish steps: docs/releasing.md
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  BUN_VERSION: "1.4.2"
+
+jobs:
+  tag:
+    name: Check tag and version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: version
+        name: Tag must match package.json and have a CHANGELOG entry
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version."
+            exit 1
+          fi
+          if ! grep -q "^## \[$version\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [$version]' section."
+            exit 1
+          fi
+          case "$version" in *-*) prerelease=true ;; *) prerelease=false ;; esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+
+  ci:
+    name: CI
+    needs: tag
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml
+
+  binaries:
+    name: Build standalone binaries
+    needs: [tag, ci]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+          no-cache: true
+      - run: npm ci
+      - run: node scripts/build-binaries.mjs
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: release/ccli-*
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: binaries
+          path: release/
+          if-no-files-found: error
+          retention-days: 7
+
+  verify-binaries:
+    name: Run ${{ matrix.target }} on ${{ matrix.os }}
+    needs: [tag, binaries]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, target: linux-x64 }
+          - { os: ubuntu-latest, target: linux-x64-musl, container: "alpine:3.22" }
+          - { os: ubuntu-24.04-arm, target: linux-arm64 }
+          - { os: ubuntu-24.04-arm, target: linux-arm64-musl, container: "alpine:3.22" }
+          - { os: macos-latest, target: darwin-arm64 }
+          - { os: macos-15-intel, target: darwin-x64 }
+          - { os: windows-latest, target: windows-x64, ext: .exe }
+          - { os: windows-11-arm, target: windows-arm64, ext: .exe }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: binaries
+          path: release
+      - name: Verify checksum
+        working-directory: release
+        run: |
+          file="ccli-${{ needs.tag.outputs.version }}-${{ matrix.target }}${{ matrix.ext }}"
+          grep "  $file\$" SHA256SUMS.txt > expected.txt
+          if command -v sha256sum >/dev/null; then sha256sum --check expected.txt; else shasum -a 256 --check expected.txt; fi
+          chmod +x "$file"
+      - name: Run the binary
+        run: |
+          file="release/ccli-${{ needs.tag.outputs.version }}-${{ matrix.target }}${{ matrix.ext }}"
+          if [ -n "${{ matrix.container }}" ]; then
+            docker run --rm -v "$PWD/release:/release:ro" "${{ matrix.container }}" sh -ec "
+              apk add --no-cache libstdc++ git >/dev/null
+              /$file --version
+              git init -q /repo && cd /repo && echo hi > a && git add a
+              CCLI_CONFIG_DIR=/tmp/ccli /$file commit -t fix -m 'check binary' --no-gitmoji --print
+            "
+            exit 0
+          fi
+          out="$("./$file" --version)"
+          echo "$out"
+          test "$out" = "${{ needs.tag.outputs.version }}"
+          repo="$RUNNER_TEMP/repo"
+          git init -q "$repo"
+          echo hi > "$repo/a"
+          git -C "$repo" add a
+          CCLI_CONFIG_DIR="$RUNNER_TEMP/ccli" CCLI_DISABLE_KEYCHAIN=1 "./$file" -C "$repo" commit -t fix -m "check binary" --no-gitmoji --print
+
+  publish-npm:
+    name: Publish to npm
+    needs: [tag, ci, verify-binaries]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Must match the environment configured for this package's trusted publisher on npmjs.com.
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@yourakshaw/conventional-commits-cli
+    permissions:
+      contents: read
+      id-token: write # OIDC for npm trusted publishing; provenance is generated automatically
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          # No dependency cache in a job that holds an OIDC token (cache-poisoning risk).
+          package-manager-cache: false
+      - name: Ensure npm supports trusted publishing (>= 11.5.1)
+        run: |
+          current="$(npm --version)"
+          if ! node -e "const [a,b,c]=process.argv[1].split('.').map(Number); process.exit(a>11||(a===11&&(b>5||(b===5&&c>=1)))?0:1)" "$current"; then
+            npm install --global npm@11
+          fi
+          npm --version
+      - run: npm ci
+      - name: Publish
+        run: |
+          if [ "${{ needs.tag.outputs.prerelease }}" = "true" ]; then
+            npm publish --access public --tag next
+          else
+            npm publish --access public
+          fi
+
+  github-release:
+    name: Create GitHub Release
+    needs: [tag, publish-npm]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: binaries
+          path: release
+      - name: Release notes from CHANGELOG.md
+        run: |
+          version="${{ needs.tag.outputs.version }}"
+          awk -v v="[$version]" '
+            index($0, "## " v) == 1 { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          {
+            echo
+            echo "### Install"
+            echo
+            echo '```sh'
+            echo "npm install --global @yourakshaw/conventional-commits-cli@$version"
+            echo '```'
+            echo
+            echo "Standalone binaries are attached below. Verify them with \`SHA256SUMS.txt\` or \`gh attestation verify <file> --repo $GITHUB_REPOSITORY\`."
+          } >> notes.md
+          cat notes.md
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags=()
+          if [ "${{ needs.tag.outputs.prerelease }}" = "true" ]; then flags+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" release/ccli-* release/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file notes.md \
+            --verify-tag \
+            "${flags[@]}"

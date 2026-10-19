@@ -1,0 +1,83 @@
+{
+  "name": "@yourakshaw/conventional-commits-cli",
+  "version": "0.1.0",
+  "description": "Write Conventional Commits by hand or generate them from your staged changes with OpenAI, Anthropic, xAI or Gemini — with secret scanning, provider fallback and mandatory review.",
+  "keywords": [
+    "conventional-commits",
+    "commit",
+    "commit-message",
+    "git",
+    "cli",
+    "commitlint",
+    "gitmoji",
+    "ai",
+    "llm",
+    "openai",
+    "anthropic",
+    "claude",
+    "gemini",
+    "grok"
+  ],
+  "license": "MIT",
+  "author": "Ayush Kumar Shaw",
+  "homepage": "https://github.com/YourAKShaw/conventional-commits-cli#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YourAKShaw/conventional-commits-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/YourAKShaw/conventional-commits-cli/issues"
+  },
+  "type": "module",
+  "bin": {
+    "conventional-commits-cli": "dist/cli.js",
+    "ccli": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "schema": "node scripts/generate-schema.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "npm run build && vitest run --config vitest.e2e.config.ts",
+    "check": "npm run lint && npm run typecheck && npm test && npm run test:e2e",
+    "binaries": "node scripts/build-binaries.mjs",
+    "prepack": "npm run build"
+  },
+  "optionalDependencies": {
+    "@napi-rs/keyring": "2.1.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@clack/prompts": "1.8.1",
+    "@commitlint/config-conventional": "21.2.4",
+    "@commitlint/lint": "21.2.4",
+    "@secretlint/core": "13.0.7",
+    "@secretlint/secretlint-rule-preset-recommend": "13.0.7",
+    "@types/node": "22.20.5",
+    "@types/picomatch": "4.0.3",
+    "commander": "15.0.0",
+    "conventional-changelog-conventionalcommits": "10.4.1",
+    "esbuild": "0.28.2",
+    "gitmojis": "3.15.0",
+    "picomatch": "4.0.7",
+    "typescript": "7.0.2",
+    "vitest": "5.0.5",
+    "zod": "4.6.7"
+  }
+}

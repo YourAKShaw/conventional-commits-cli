@@ -1,0 +1,347 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "number",
+      "const": 1
+    },
+    "providers": {
+      "type": "object",
+      "properties": {
+        "order": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "openai",
+              "anthropic",
+              "xai",
+              "gemini"
+            ]
+          }
+        },
+        "openai": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "effort": {
+              "type": "string",
+              "pattern": "^[a-z]+$"
+            },
+            "maxOutputTokens": {
+              "type": "integer",
+              "minimum": 256,
+              "maximum": 128000
+            },
+            "timeoutMs": {
+              "type": "integer",
+              "minimum": 1000,
+              "maximum": 600000
+            },
+            "baseUrl": {
+              "type": "string",
+              "format": "uri"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "structuredOutput": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "anthropic": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "effort": {
+              "type": "string",
+              "pattern": "^[a-z]+$"
+            },
+            "maxOutputTokens": {
+              "type": "integer",
+              "minimum": 256,
+              "maximum": 128000
+            },
+            "timeoutMs": {
+              "type": "integer",
+              "minimum": 1000,
+              "maximum": 600000
+            },
+            "baseUrl": {
+              "type": "string",
+              "format": "uri"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "structuredOutput": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "xai": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "effort": {
+              "type": "string",
+              "pattern": "^[a-z]+$"
+            },
+            "maxOutputTokens": {
+              "type": "integer",
+              "minimum": 256,
+              "maximum": 128000
+            },
+            "timeoutMs": {
+              "type": "integer",
+              "minimum": 1000,
+              "maximum": 600000
+            },
+            "baseUrl": {
+              "type": "string",
+              "format": "uri"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "structuredOutput": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "gemini": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "effort": {
+              "type": "string",
+              "pattern": "^[a-z]+$"
+            },
+            "maxOutputTokens": {
+              "type": "integer",
+              "minimum": 256,
+              "maximum": 128000
+            },
+            "timeoutMs": {
+              "type": "integer",
+              "minimum": 1000,
+              "maximum": 600000
+            },
+            "baseUrl": {
+              "type": "string",
+              "format": "uri"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "structuredOutput": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "smart": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "maxInputTokens": {
+          "type": "integer",
+          "minimum": 2000,
+          "maximum": 400000
+        },
+        "maxRegenerations": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "requestBudgetMs": {
+          "type": "integer",
+          "minimum": 5000,
+          "maximum": 900000
+        },
+        "language": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "historyCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50
+        },
+        "largeChangeFiles": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "largeChangeLines": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "acknowledgedProviders": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "openai",
+              "anthropic",
+              "xai",
+              "gemini"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "format": {
+      "type": "object",
+      "properties": {
+        "gitmoji": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "unicode",
+                "code"
+              ]
+            },
+            "position": {
+              "type": "string",
+              "enum": [
+                "after-colon",
+                "prefix"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "headerMaxLength": {
+          "type": "integer",
+          "minimum": 20,
+          "maximum": 200
+        },
+        "bodyWrap": {
+          "type": "integer",
+          "minimum": 40,
+          "maximum": 200
+        },
+        "types": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "commitlint"
+            },
+            {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]*$"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9-]*$"
+                      },
+                      "description": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "description"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^\\S+$"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "secrets": {
+      "type": "object",
+      "properties": {
+        "extraDenyGlobs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "extraPatterns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "onDetect": {
+          "type": "string",
+          "enum": [
+            "ask",
+            "exclude",
+            "redact",
+            "abort"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "commitlint": {
+      "type": "object",
+      "properties": {
+        "loadJsConfig": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$id": "https://raw.githubusercontent.com/YourAKShaw/conventional-commits-cli/main/schema/config.schema.json",
+  "title": "conventional-commits-cli global configuration"
+}

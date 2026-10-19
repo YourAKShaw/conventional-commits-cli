@@ -1,0 +1,80 @@
+name: Bug report
+description: Something does not work as documented — a crash, a wrong message, a provider error, an install problem.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search existing issues before submitting. Use a minimal, sanitized example: **never paste API keys, private diffs or real secrets**.
+        For security vulnerabilities, use the [private reporting form](https://github.com/YourAKShaw/conventional-commits-cli/security/advisories/new) instead.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Manual commit (ccli commit)
+        - Smart commit (ccli smart commit)
+        - Provider / fallback / models
+        - Secret gate
+        - Configuration (config, .ccli.json, .ccliignore)
+        - API keys / keychain (ccli auth)
+        - Git hook
+        - Installation / npm / npx / binaries
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: The smallest sequence of commands that shows the problem, starting from `git init` if possible.
+      placeholder: |
+        git init demo && cd demo
+        echo "x" > a.txt && git add a.txt
+        ccli commit -t feat -m "add a" --print
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: Include the full output. Re-running with `--verbose` adds diagnostics without keys or diff content.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `ccli doctor --json`
+      description: Shows versions, platform, configuration state and which providers have keys (never the keys themselves). Remove anything you consider private.
+      render: json
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install ccli?
+      options:
+        - npm / pnpm / yarn / bun global install
+        - npx
+        - Project dev dependency
+        - Standalone binary
+        - From source
+    validations:
+      required: true
+  - type: input
+    id: shell
+    attributes:
+      label: Terminal and shell
+      placeholder: Windows Terminal + PowerShell 7, iTerm2 + zsh, GNOME Terminal + bash…
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?
+      description: Provider and model involved, relevant config (without keys), commitlint config, Git hooks in use.

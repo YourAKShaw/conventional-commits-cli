@@ -1,0 +1,23 @@
+name: Documentation correction
+description: Report unclear or outdated docs, broken links, wrong examples, or stale provider information.
+labels: ["documentation"]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: File, section, or link
+      placeholder: docs/providers.md#models-and-effort
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong or unclear?
+      description: Quote only the relevant passage and explain the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: correction
+    attributes:
+      label: Suggested correction or supporting source
+      description: For provider models, parameters or error codes, link the vendor's documentation.

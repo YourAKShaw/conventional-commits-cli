@@ -1,0 +1,165 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  # The release workflow runs this exact pipeline before publishing.
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  FORCE_COLOR: "0"
+  NO_COLOR: "1"
+
+jobs:
+  quality:
+    name: Lint, types, schema, supply chain
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Verify registry signatures and provenance of dependencies
+        run: npm audit signatures
+      - run: npm run lint
+      - run: npm run typecheck
+      - name: JSON schemas are up to date
+        run: |
+          npm run schema
+          git diff --exit-code -- schema/ || {
+            echo "::error::schema/ is out of date. Run 'npm run schema' and commit the result."
+            exit 1
+          }
+
+  test:
+    name: Test (${{ matrix.os }}, Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [22, 24, 26]
+        include:
+          # The minimum supported version (package.json engines).
+          - os: ubuntu-latest
+            node: 22.12.0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - name: Unit and integration tests
+        run: npm test
+      - name: End-to-end tests (built CLI against mock providers)
+        run: npm run test:e2e
+      - name: Real-terminal smoke test
+        if: runner.os != 'Windows'
+        run: python3 scripts/tty-smoke.py
+
+  package:
+    name: Package install (${{ matrix.os }})
+    needs: quality
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Pack
+        run: |
+          npm pack
+          ls -l ./*.tgz
+          tar -tzf ./*.tgz | sort
+      - name: Install the tarball globally and run it
+        run: |
+          prefix="$RUNNER_TEMP/prefix"
+          npm install --global --prefix "$prefix" ./*.tgz
+          # npm puts global shims in <prefix> on Windows and <prefix>/bin elsewhere.
+          if [ "$RUNNER_OS" = "Windows" ]; then bindir="$(cygpath -u "$prefix")"; else bindir="$prefix/bin"; fi
+          export PATH="$bindir:$PATH"
+          export CCLI_CONFIG_DIR="$RUNNER_TEMP/ccli-config" CCLI_DISABLE_KEYCHAIN=1
+          ccli --version
+          conventional-commits-cli --help > /dev/null
+
+          repo="$RUNNER_TEMP/repo"
+          git init -q "$repo"
+          cd "$repo"
+          git config user.email ci@example.com
+          git config user.name CI
+          echo hello > hello.txt
+          git add hello.txt
+          ccli commit --type feat --scope core --message "add greeting" --no-gitmoji --print | git commit -q -F -
+          subject="$(git log -1 --format=%s)"
+          echo "Committed: $subject"
+          test "$subject" = "feat(core): add greeting"
+          ccli doctor
+          ccli doctor --json | node -e "JSON.parse(require('fs').readFileSync(0, 'utf8'))"
+      - name: Run through npx from the tarball
+        run: |
+          tarballs=("$PWD"/*.tgz)
+          tarball="${tarballs[0]}"
+          cd "$RUNNER_TEMP"
+          npx --yes --package "$tarball" -- ccli --version
+
+  keychain:
+    name: OS keychain (${{ matrix.os }})
+    needs: quality
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    # Hosted-runner keychain access is environment-dependent; failures are reported but do not block.
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Store, list and remove a key in the OS keychain
+        run: |
+          export CCLI_CONFIG_DIR="$RUNNER_TEMP/ccli-config"
+          printf 'sk-ci-keychain-test-%s' "$GITHUB_RUN_ID" | node dist/cli.js auth set openai --stdin
+          node dist/cli.js auth list --json | tee list.json
+          node -e "const o=JSON.parse(require('fs').readFileSync('list.json','utf8')).find(p=>p.provider==='openai'); if(o?.source!=='keychain'){console.error('expected the key in the keychain, got', o); process.exit(1)}"
+          node dist/cli.js auth remove openai

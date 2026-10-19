@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "number",
+      "const": 1
+    },
+    "format": {
+      "type": "object",
+      "properties": {
+        "gitmoji": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "style": {
+              "type": "string",
+              "enum": [
+                "unicode",
+                "code"
+              ]
+            },
+            "position": {
+              "type": "string",
+              "enum": [
+                "after-colon",
+                "prefix"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "headerMaxLength": {
+          "type": "integer",
+          "minimum": 20,
+          "maximum": 200
+        },
+        "bodyWrap": {
+          "type": "integer",
+          "minimum": 40,
+          "maximum": 200
+        },
+        "types": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "commitlint"
+            },
+            {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]*$"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9-]*$"
+                      },
+                      "description": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "description"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^\\S+$"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "secrets": {
+      "type": "object",
+      "properties": {
+        "extraDenyGlobs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "extraPatterns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "smart": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "maxInputTokens": {
+          "type": "integer",
+          "minimum": 2000,
+          "maximum": 400000
+        }
+      },
+      "additionalProperties": false
+    },
+    "providers": {
+      "type": "object",
+      "properties": {
+        "allow": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "openai",
+              "anthropic",
+              "xai",
+              "gemini"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$id": "https://raw.githubusercontent.com/YourAKShaw/conventional-commits-cli/main/schema/repo-config.schema.json",
+  "title": "conventional-commits-cli repository configuration (.ccli.json)"
+}

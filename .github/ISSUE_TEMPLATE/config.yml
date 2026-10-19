@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/YourAKShaw/conventional-commits-cli/security/advisories/new
+    about: Report vulnerabilities privately. Please do not open a public issue.
+  - name: Usage and support guidance
+    url: https://github.com/YourAKShaw/conventional-commits-cli/blob/HEAD/.github/SUPPORT.md
+    about: Run `ccli doctor` and read how to ask a usage question.

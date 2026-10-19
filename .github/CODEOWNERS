@@ -1,0 +1,9 @@
+# Default owner for everything in the repository.
+* @YourAKShaw
+
+# Security-sensitive areas: changes here affect what leaves the user's machine or what gets committed.
+/src/guard/ @YourAKShaw
+/src/providers/ @YourAKShaw
+/src/config/ @YourAKShaw
+/src/keys/ @YourAKShaw
+/.github/workflows/ @YourAKShaw
