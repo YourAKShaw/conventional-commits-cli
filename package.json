@@ -60,7 +60,7 @@
     "prepack": "npm run build"
   },
   "optionalDependencies": {
-    "@napi-rs/keyring": "2.1.1"
+    "@napi-rs/keyring": "2.1.2"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
